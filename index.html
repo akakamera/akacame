@@ -1,761 +1,475 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ヒルクライム予測＆ワークアウト用パワー計算ツール</title>
-  <style>
-    :root {
-      --bg: #0b1020;
-      --panel: #121933;
-      --panel-2: #182146;
-      --text: #eef2ff;
-      --muted: #a8b0d3;
-      --accent: #6ea8fe;
-      --good: #42d392;
-      --warn: #ffb84d;
-      --danger: #ff6b6b;
-      --border: #2a356b;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: Inter, "Hiragino Sans", "Yu Gothic UI", sans-serif;
-      background: linear-gradient(180deg, #0b1020 0%, #111831 100%);
-      color: var(--text);
-    }
-    .wrap {
-      max-width: 1360px;
-      margin: 0 auto;
-      padding: 24px;
-    }
-    h1 {
-      margin: 0 0 8px;
-      font-size: 30px;
-    }
-    .sub {
-      color: var(--muted);
-      margin-bottom: 20px;
-      line-height: 1.6;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: 400px 1fr;
-      gap: 20px;
-      align-items: start;
-    }
-    .panel {
-      background: rgba(18, 25, 51, 0.92);
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 18px;
-      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
-      position: sticky;
-      top: 16px;
-    }
-    .panel h2, .card h2 {
-      margin: 0 0 14px;
-      font-size: 20px;
-    }
-    .section-title {
-      font-size: 13px;
-      letter-spacing: .06em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin: 18px 0 10px;
-    }
-    .form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-    .field {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    .field.full { grid-column: 1 / -1; }
-    label {
-      font-size: 13px;
-      color: var(--muted);
-    }
-    input, select {
-      width: 100%;
-      background: var(--panel-2);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 10px 12px;
-      font-size: 15px;
-    }
-    .btn-row {
-      display: flex;
-      gap: 10px;
-      margin-top: 14px;
-      flex-wrap: wrap;
-    }
-    button {
-      border: none;
-      border-radius: 12px;
-      padding: 11px 14px;
-      font-size: 14px;
-      cursor: pointer;
-      font-weight: 700;
-    }
-    .primary { background: var(--accent); color: #091224; }
-    .secondary { background: #273466; color: var(--text); }
-    .results {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 16px;
-    }
-    .card {
-      background: rgba(24, 33, 70, 0.92);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 16px;
-    }
-    .metric-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-    }
-    .metric {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 14px;
-      padding: 12px;
-      min-height: 84px;
-    }
-    .metric .k {
-      color: var(--muted);
-      font-size: 12px;
-      margin-bottom: 6px;
-    }
-    .metric .v {
-      font-size: 20px;
-      font-weight: 800;
-      line-height: 1.25;
-      word-break: break-word;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 8px;
-    }
-    th, td {
-      padding: 10px 8px;
-      text-align: left;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      font-size: 14px;
-      vertical-align: top;
-    }
-    th { color: var(--muted); font-weight: 700; }
-    .note {
-      color: var(--muted);
-      line-height: 1.6;
-      font-size: 13px;
-    }
-    canvas {
-      width: 100%;
-      height: auto;
-      background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 16px;
-      padding: 6px;
-    }
-    .tag {
-      display: inline-block;
-      background: rgba(110,168,254,.14);
-      color: #bcd4ff;
-      border: 1px solid rgba(110,168,254,.35);
-      padding: 5px 9px;
-      border-radius: 999px;
-      font-size: 12px;
-      margin-right: 6px;
-      margin-bottom: 6px;
-    }
-    .wide { grid-column: 1 / -1; }
-    .save-note {
-      margin-top: 10px;
-      color: #8fd9b2;
-      font-size: 12px;
-    }
-    @media (max-width: 1100px) {
-      .grid { grid-template-columns: 1fr; }
-      .panel { position: static; }
-      .results { grid-template-columns: 1fr; }
-      .wide { grid-column: auto; }
-      .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-    @media (max-width: 700px) {
-      .form-grid, .metric-grid { grid-template-columns: 1fr; }
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>月間距離進捗メーター</title>
+<style>
+  :root{
+    --bg:#0f1115;
+    --panel:#181c23;
+    --panel2:#202631;
+    --text:#f4f6f8;
+    --muted:#9aa4b2;
+    --line:#343c49;
+    --accent:#5da9ff;
+    --good:#44d17a;
+    --bad:#ff6666;
+    --warn:#f5c451;
+  }
+
+  *{box-sizing:border-box}
+
+  body{
+    margin:0;
+    min-height:100vh;
+    font-family:
+      -apple-system, BlinkMacSystemFont, "Segoe UI",
+      "Noto Sans JP", "Yu Gothic UI", Meiryo, sans-serif;
+    background:linear-gradient(180deg,#0b0d11 0%, #11151b 100%);
+    color:var(--text);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    padding:24px;
+  }
+
+  .app{
+    width:min(980px,100%);
+    background:rgba(24,28,35,.96);
+    border:1px solid #2b323e;
+    border-radius:22px;
+    padding:26px;
+    box-shadow:0 20px 50px rgba(0,0,0,.35);
+  }
+
+  h1{
+    margin:0 0 6px;
+    font-size:clamp(24px,4vw,36px);
+  }
+
+  .subtitle{
+    color:var(--muted);
+    margin-bottom:24px;
+  }
+
+  .inputs{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+    margin-bottom:28px;
+  }
+
+  .field{
+    background:var(--panel2);
+    border:1px solid #303846;
+    border-radius:14px;
+    padding:14px;
+  }
+
+  label{
+    display:block;
+    color:var(--muted);
+    font-size:13px;
+    margin-bottom:8px;
+  }
+
+  .input-wrap{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+
+  input[type="number"]{
+    width:100%;
+    background:#11151b;
+    color:white;
+    border:1px solid #384252;
+    border-radius:10px;
+    padding:12px 14px;
+    font-size:20px;
+    outline:none;
+  }
+
+  input[type="number"]:focus{
+    border-color:var(--accent);
+  }
+
+  .unit{
+    color:var(--muted);
+    font-weight:600;
+  }
+
+  .section{
+    margin-top:22px;
+  }
+
+  .section-head{
+    display:flex;
+    justify-content:space-between;
+    gap:16px;
+    align-items:flex-end;
+    margin-bottom:10px;
+  }
+
+  .section-title{
+    font-size:15px;
+    color:#dbe3ec;
+    font-weight:700;
+  }
+
+  .section-value{
+    font-size:14px;
+    color:var(--muted);
+    text-align:right;
+  }
+
+  .bar{
+    height:28px;
+    border-radius:999px;
+    overflow:hidden;
+    background:#0f1319;
+    border:1px solid #303846;
+    position:relative;
+  }
+
+  .fill{
+    position:absolute;
+    left:0;
+    top:0;
+    bottom:0;
+    width:0%;
+    transition:width .35s ease;
+  }
+
+  .time-fill{
+    background:linear-gradient(90deg,#5865f2,#5da9ff);
+  }
+
+  .distance-fill{
+    background:linear-gradient(90deg,#1fa95a,#44d17a);
+  }
+
+  .bar-label{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:12px;
+    font-weight:800;
+    letter-spacing:.02em;
+    text-shadow:0 1px 2px rgba(0,0,0,.5);
+    pointer-events:none;
+  }
+
+  .ticks{
+    display:flex;
+    justify-content:space-between;
+    font-size:11px;
+    color:#6f7b8a;
+    margin-top:7px;
+  }
+
+  .meter{
+    margin-top:28px;
+    background:#10141a;
+    border:1px solid #303846;
+    border-radius:16px;
+    padding:20px;
+  }
+
+  .gap-line{
+    position:relative;
+    height:16px;
+    border-radius:999px;
+    background:linear-gradient(
+      90deg,
+      rgba(255,102,102,.65) 0%,
+      rgba(255,102,102,.18) 45%,
+      rgba(255,255,255,.15) 50%,
+      rgba(68,209,122,.18) 55%,
+      rgba(68,209,122,.65) 100%
+    );
+    margin:18px 0 8px;
+  }
+
+  .center-marker{
+    position:absolute;
+    top:-8px;
+    bottom:-8px;
+    width:2px;
+    left:50%;
+    background:#f4f6f8;
+    opacity:.7;
+  }
+
+  .needle{
+    position:absolute;
+    top:-9px;
+    width:18px;
+    height:34px;
+    border-radius:8px;
+    transform:translateX(-50%);
+    background:white;
+    box-shadow:0 0 0 3px rgba(255,255,255,.12),
+               0 5px 15px rgba(0,0,0,.4);
+    transition:left .35s ease, background .35s ease;
+  }
+
+  .gap-scale{
+    display:flex;
+    justify-content:space-between;
+    color:var(--muted);
+    font-size:11px;
+  }
+
+  .summary{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:12px;
+    margin-top:22px;
+  }
+
+  .card{
+    background:var(--panel2);
+    border:1px solid #303846;
+    border-radius:14px;
+    padding:14px;
+  }
+
+  .card .name{
+    color:var(--muted);
+    font-size:12px;
+    margin-bottom:7px;
+  }
+
+  .card .num{
+    font-size:22px;
+    font-weight:800;
+  }
+
+  .status{
+    margin-top:18px;
+    font-size:20px;
+    font-weight:800;
+    text-align:center;
+    padding:14px;
+    border-radius:14px;
+    background:#141922;
+  }
+
+  .footer{
+    margin-top:18px;
+    color:#778394;
+    font-size:12px;
+    line-height:1.7;
+  }
+
+  @media (max-width:720px){
+    .inputs,.summary{grid-template-columns:1fr}
+  }
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>ヒルクライム予測＆ワークアウト用パワー計算ツール</h1>
-    <div class="sub">
-      表示FTP・実務FTP・CP・TTE・パワーカーブを入力すると、各時間帯のワークアウト用パワーを自動計算します。<br>
-      さらに、ヒルクライムの距離・標高差・山頂標高・機材重量から、予測タイムと目安出力も算出します。入力内容はブラウザに保存されます。
+<div class="app">
+  <h1>月間距離進捗メーター</h1>
+  <div class="subtitle">
+    月初から月末までの時間進捗と、走行距離の進捗を比較します。
+  </div>
+
+  <div class="inputs">
+    <div class="field">
+      <label for="target">月間目標距離</label>
+      <div class="input-wrap">
+        <input id="target" type="number" min="1" step="10" value="1500">
+        <span class="unit">km</span>
+      </div>
     </div>
 
-    <div class="grid">
-      <div class="panel">
-        <h2>入力</h2>
-        <div class="form-grid">
-          <div class="field">
-            <label for="height">身長 (cm)</label>
-            <input id="height" type="number" value="164" step="0.1" />
-          </div>
-          <div class="field">
-            <label for="weight">体重 (kg)</label>
-            <input id="weight" type="number" value="69" step="0.1" />
-          </div>
-          <div class="field">
-            <label for="bikeWeight">機材重量 (kg)</label>
-            <input id="bikeWeight" type="number" value="8" step="0.1" />
-          </div>
-          <div class="field">
-            <label for="displayFtp">表示FTP (20分等から算出)</label>
-            <input id="displayFtp" type="number" value="257" step="1" />
-          </div>
-          <div class="field">
-            <label for="workoutFtp">実務FTP (ワークアウト用)</label>
-            <input id="workoutFtp" type="number" value="250" step="1" />
-          </div>
-          <div class="field">
-            <label for="cp">CP (Critical Power)</label>
-            <input id="cp" type="number" value="243" step="1" />
-          </div>
-          <div class="field">
-            <label for="tte">TTE (分)</label>
-            <input id="tte" type="number" value="35" step="1" />
-          </div>
-          <div class="field">
-            <label for="calibration">ヒルクライム補正係数</label>
-            <input id="calibration" type="number" value="1.01" step="0.01" />
-          </div>
-        </div>
-
-        <div class="section-title">パワーカーブ入力</div>
-        <div class="form-grid">
-          <div class="field">
-            <label for="p10s">10秒 (W)</label>
-            <input id="p10s" type="number" value="530" step="1" />
-          </div>
-          <div class="field">
-            <label for="p1m">1分 (W)</label>
-            <input id="p1m" type="number" value="357" step="1" />
-          </div>
-          <div class="field">
-            <label for="p5m">5分 (W)</label>
-            <input id="p5m" type="number" value="285" step="1" />
-          </div>
-          <div class="field">
-            <label for="p10m">10分 (W)</label>
-            <input id="p10m" type="number" value="274" step="1" />
-          </div>
-          <div class="field full">
-            <label for="p20m">20分 (W)</label>
-            <input id="p20m" type="number" value="255" step="1" />
-          </div>
-        </div>
-
-        <div class="section-title">ヒルクライムテンプレート</div>
-        <div class="form-grid">
-          <div class="field full">
-            <label for="courseTemplate">コース選択</label>
-            <select id="courseTemplate">
-              <option value="custom">カスタム入力</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="section-title">ヒルクライム入力</div>
-        <div class="form-grid">
-          <div class="field full">
-            <label for="courseName">コース名</label>
-            <input id="courseName" type="text" value="カスタムコース" />
-          </div>
-          <div class="field">
-            <label for="climbDistance">距離 (km)</label>
-            <input id="climbDistance" type="number" value="20.8" step="0.1" />
-          </div>
-          <div class="field">
-            <label for="climbElevation">標高差 (m)</label>
-            <input id="climbElevation" type="number" value="1258" step="1" />
-          </div>
-          <div class="field full">
-            <label for="summitAltitude">山頂標高 (m)</label>
-            <input id="summitAltitude" type="number" value="1400" step="1" />
-          </div>
-        </div>
-
-        <div class="btn-row">
-          <button class="primary" id="calcBtn">再計算</button>
-          <button class="secondary" id="sampleBtn">サンプル値を再入力</button>
-        </div>
-        <div class="save-note" id="saveNote">入力内容はこの端末のブラウザに自動保存されます。</div>
-
-        <div class="section-title">考え方</div>
-        <div class="note">
-          高強度は「何%FTPか」よりも、<b>その時間で何本そろうか</b>を重視します。<br>
-          持続系は、表示FTPより少し保守的な<b>実務FTP</b>で組むと完遂率が上がりやすいです。<br>
-          CPは生理学寄りの閾値の芯、TTEはその強度を使える長さの目安です。<br>
-          ヒルクライム予測は、体重＋機材重量と標高補正を使う簡易モデルで、細かい空気抵抗は入れていません。<br>
-          <b>ヒルクライム補正係数</b>は、路面・コーナー・再加速・集団効果・計測誤差など、式に入れていない実走差をまとめて補正する係数です。<b>1.00前後</b>を基準に、実績タイムへ近づくよう微調整してください。
-        </div>
-      </div>
-
-      <div class="results">
-        <div class="card">
-          <h2>主要指標</h2>
-          <div class="metric-grid">
-            <div class="metric"><div class="k">BMI</div><div class="v" id="bmiOut">-</div></div>
-            <div class="metric"><div class="k">体重</div><div class="v" id="weightOut">-</div></div>
-            <div class="metric"><div class="k">機材重量</div><div class="v" id="bikeWeightOut">-</div></div>
-            <div class="metric"><div class="k">表示FTP</div><div class="v" id="displayFtpOut">-</div></div>
-            <div class="metric"><div class="k">実務FTP</div><div class="v" id="workoutFtpOut">-</div></div>
-            <div class="metric"><div class="k">CP</div><div class="v" id="cpOut">-</div></div>
-            <div class="metric"><div class="k">20分ベスト</div><div class="v" id="p20Out">-</div></div>
-            <div class="metric"><div class="k">5分ベスト</div><div class="v" id="p5Out">-</div></div>
-            <div class="metric"><div class="k">1分ベスト</div><div class="v" id="p1Out">-</div></div>
-          </div>
-          <div style="margin-top: 12px;">
-            <span class="tag" id="tteTag">TTE: -</span>
-            <span class="tag" id="ftpGapTag">表示-実務FTP差: -</span>
-            <span class="tag" id="cpGapTag">実務FTP-CP差: -</span>
-          </div>
-        </div>
-
-        <div class="card">
-          <h2>ワークアウト処方パワー</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>時間帯</th>
-                <th>用途</th>
-                <th>%基準</th>
-                <th>推奨W</th>
-                <th>W/kg</th>
-              </tr>
-            </thead>
-            <tbody id="workoutTable"></tbody>
-          </table>
-        </div>
-
-        <div class="card wide">
-          <h2>ワークアウト処方と入力パワーカーブ</h2>
-          <canvas id="combinedChart" width="1040" height="420"></canvas>
-          <div class="note" style="margin-top: 10px;">
-            背景は Zwift 風の L1〜L7 色帯です。オレンジが入力パワーカーブ、青がワークアウト処方です。
-          </div>
-        </div>
-
-        <div class="card wide">
-          <h2>ヒルクライム予測</h2>
-          <div class="metric-grid" style="margin-bottom:12px;">
-            <div class="metric"><div class="k">コース名</div><div class="v" id="courseNameOut">-</div></div>
-            <div class="metric"><div class="k">平均勾配</div><div class="v" id="gradeOut">-</div></div>
-            <div class="metric"><div class="k">総重量</div><div class="v" id="totalMassOut">-</div></div>
-            <div class="metric"><div class="k">目安出力</div><div class="v" id="climbPowerOut">-</div></div>
-            <div class="metric"><div class="k">予測タイム</div><div class="v" id="climbTimeOut">-</div></div>
-            <div class="metric"><div class="k">目安W/kg</div><div class="v" id="climbWkgOut">-</div></div>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>シナリオ</th>
-                <th>出力</th>
-                <th>W/kg</th>
-                <th>予測タイム</th>
-              </tr>
-            </thead>
-            <tbody id="climbTable"></tbody>
-          </table>
-          <div class="note" style="margin-top:10px;">
-            守り・基準・攻めは、表示FTP・実務FTP・CP・20分ベストを混ぜて作った実走寄りの目安です。攻めは1時間級ヒルクライムでの上振れを見込んで強めに補正しています。
-          </div>
-        </div>
+    <div class="field">
+      <label for="current">現在の走行距離</label>
+      <div class="input-wrap">
+        <input id="current" type="number" min="0" step="1" value="0">
+        <span class="unit">km</span>
       </div>
     </div>
   </div>
 
-  <script>
-    const courseTemplates = [
-      { key: 'custom', name: 'カスタム入力', distance: 20.8, elevation: 1258, summit: 1400 },
-      { key: 'fujihill', name: '富士ヒル', distance: 24.0, elevation: 1255, summit: 2305 },
-      { key: 'norikura', name: '乗鞍ヒルクライム', distance: 20.5, elevation: 1260, summit: 2720 },
-      { key: 'haruhill', name: 'ハルヒル 榛名湖コース', distance: 14.7, elevation: 907, summit: 1084 },
-      { key: 'akagi', name: '赤城ヒルクライム', distance: 18.6, elevation: 1238, summit: 1368 },
-      { key: 'matsumoto_utsukushigahara', name: '松本ヒルクライム 美ヶ原', distance: 21.6, elevation: 1270, summit: 1918 },
-      { key: 'jusangoge', name: '十三峠', distance: 4.1, elevation: 374, summit: 430 },
-      { key: 'budouzaka', name: 'ぶどう峠', distance: 3.8, elevation: 300, summit: 390 },
-      { key: 'kuragari', name: '暗峠', distance: 2.9, elevation: 280, summit: 455 },
-      { key: 'yabitsu', name: 'ヤビツ峠', distance: 11.8, elevation: 670, summit: 761 },
-      { key: 'tominomori', name: '都民の森', distance: 19.9, elevation: 1000, summit: 981 },
-      { key: 'shiraishi', name: '白石峠', distance: 6.4, elevation: 531, summit: 780 },
-      { key: 'iru', name: '入山峠', distance: 5.5, elevation: 390, summit: 560 },
-      { key: 'kazahari', name: '風張峠', distance: 12.5, elevation: 720, summit: 1146 },
-      { key: 'sadamine', name: '定峰峠', distance: 5.1, elevation: 320, summit: 620 },
-      { key: 'shomaru', name: '正丸峠', distance: 8.0, elevation: 500, summit: 636 },
-      { key: 'teishakuba', name: '渋峠', distance: 17.0, elevation: 1100, summit: 2172 },
-      { key: 'kusatsu', name: '草津', distance: 13.2, elevation: 950, summit: 1600 },
-      { key: 'irago', name: '伊良湖仮想HC', distance: 10.0, elevation: 450, summit: 500 },
-      { key: 'rokko', name: '六甲山', distance: 12.0, elevation: 850, summit: 931 },
-      { key: 'rokkojusan', name: '裏六甲', distance: 10.5, elevation: 720, summit: 850 },
-      { key: 'hieizan', name: '比叡山', distance: 10.0, elevation: 650, summit: 848 },
-      { key: 'daikanyama', name: '大観山', distance: 17.0, elevation: 950, summit: 1011 },
-      { key: 'mikuni', name: '三国峠', distance: 12.0, elevation: 950, summit: 1160 },
-      { key: 'kariya', name: '刈場坂峠', distance: 11.5, elevation: 730, summit: 818 },
-      { key: 'nanasake', name: '七曲り', distance: 5.3, elevation: 300, summit: 420 },
-      { key: 'tsubakiline', name: '椿ライン', distance: 17.2, elevation: 1030, summit: 981 },
-      { key: 'taikan', name: '足柄峠', distance: 11.0, elevation: 700, summit: 759 },
-      { key: 'imai', name: '今井峠', distance: 6.8, elevation: 430, summit: 760 },
-      { key: 'hanazono', name: '花園グリーンライン', distance: 9.5, elevation: 580, summit: 800 },
-      { key: 'minoh', name: '箕面勝尾寺', distance: 4.6, elevation: 240, summit: 400 },
-      { key: 'sengokubara', name: '仙石原〜長尾峠', distance: 7.6, elevation: 430, summit: 911 },
-      { key: 'tsukuba_fudotoge', name: '不動峠', distance: 3.8, elevation: 270, summit: 381 },
-      { key: 'tsukuba_kazahaya', name: '筑波 風返し', distance: 6.4, elevation: 430, summit: 550 },
-      { key: 'meruhen', name: 'メルヘン街道', distance: 15.5, elevation: 960, summit: 2127 }
-    ];
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">時間進捗</div>
+      <div class="section-value" id="timeText">--</div>
+    </div>
+    <div class="bar">
+      <div class="fill time-fill" id="timeFill"></div>
+      <div class="bar-label" id="timePct">0%</div>
+    </div>
+    <div class="ticks">
+      <span id="monthStart">1日</span>
+      <span id="monthMid">中間</span>
+      <span id="monthEnd">月末</span>
+    </div>
+  </div>
 
-    const sample = {
-      height: 164,
-      weight: 69,
-      bikeWeight: 8,
-      displayFtp: 257,
-      workoutFtp: 250,
-      cp: 243,
-      tte: 35,
-      calibration: 1.01,
-      p10s: 530,
-      p1m: 357,
-      p5m: 285,
-      p10m: 274,
-      p20m: 255,
-      climbDistance: 20.8,
-      climbElevation: 1258,
-      summitAltitude: 1400,
-      courseName: 'カスタムコース',
-      courseTemplate: 'custom',
-    };
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">距離進捗</div>
+      <div class="section-value" id="distanceText">--</div>
+    </div>
+    <div class="bar">
+      <div class="fill distance-fill" id="distanceFill"></div>
+      <div class="bar-label" id="distancePct">0%</div>
+    </div>
+    <div class="ticks">
+      <span>0 km</span>
+      <span id="targetHalf">750 km</span>
+      <span id="targetMax">1500 km</span>
+    </div>
+  </div>
 
-    const ids = Object.keys(sample);
-    const q = (id) => document.getElementById(id);
-    const STORAGE_KEY = 'akacame_hillclimb_tool_v2';
+  <div class="meter">
+    <div class="section-head">
+      <div class="section-title">予定進捗との差</div>
+      <div class="section-value" id="gapPctText">0 pt</div>
+    </div>
 
-    function populateCourseTemplates() {
-      const select = q('courseTemplate');
-      select.innerHTML = '';
-      courseTemplates.forEach(course => {
-        const option = document.createElement('option');
-        option.value = course.key;
-        option.textContent = course.name;
-        select.appendChild(option);
-      });
+    <div class="gap-line">
+      <div class="center-marker"></div>
+      <div class="needle" id="needle"></div>
+    </div>
+
+    <div class="gap-scale">
+      <span>遅れ</span>
+      <span>予定通り</span>
+      <span>先行</span>
+    </div>
+
+    <div class="summary">
+      <div class="card">
+        <div class="name">今日時点の予定距離</div>
+        <div class="num" id="expectedKm">0 km</div>
+      </div>
+      <div class="card">
+        <div class="name">予定との差</div>
+        <div class="num" id="gapKm">0 km</div>
+      </div>
+      <div class="card">
+        <div class="name">時間進捗率</div>
+        <div class="num" id="timeCard">0%</div>
+      </div>
+      <div class="card">
+        <div class="name">距離進捗率</div>
+        <div class="num" id="distanceCard">0%</div>
+      </div>
+    </div>
+
+    <div class="status" id="status">入力してください</div>
+  </div>
+
+  <div class="footer">
+    ※ 時間進捗は現在日時を基準に、月初 0:00 から翌月1日 0:00 までを100%として計算します。<br>
+    ※ 予定距離 = 月間目標距離 × 時間進捗率。差がプラスなら予定より先行、マイナスなら遅れです。
+  </div>
+</div>
+
+<script>
+  const targetEl = document.getElementById('target');
+  const currentEl = document.getElementById('current');
+
+  function clamp(v,min,max){ return Math.min(max,Math.max(min,v)); }
+
+  function update(){
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
+
+    const start = new Date(y,m,1,0,0,0,0);
+    const end = new Date(y,m+1,1,0,0,0,0);
+
+    const elapsed = now - start;
+    const total = end - start;
+    const timeRate = clamp(elapsed / total, 0, 1);
+
+    const target = Math.max(1, Number(targetEl.value) || 1);
+    const current = Math.max(0, Number(currentEl.value) || 0);
+
+    const distanceRateRaw = current / target;
+    const distanceRate = Math.max(0, distanceRateRaw);
+
+    const expected = target * timeRate;
+    const gapKm = current - expected;
+    const gapRate = distanceRateRaw - timeRate;
+
+    const timePct = timeRate * 100;
+    const distancePct = distanceRateRaw * 100;
+    const gapPoints = gapRate * 100;
+
+    document.getElementById('timeFill').style.width = timePct + '%';
+    document.getElementById('distanceFill').style.width = clamp(distancePct,0,100) + '%';
+
+    document.getElementById('timePct').textContent = timePct.toFixed(1) + '%';
+    document.getElementById('distancePct').textContent = distancePct.toFixed(1) + '%';
+
+    const daysInMonth = new Date(y,m+1,0).getDate();
+    const currentDay = now.getDate();
+    document.getElementById('timeText').textContent =
+      `${currentDay}日 / ${daysInMonth}日`;
+    document.getElementById('distanceText').textContent =
+      `${current.toLocaleString()} / ${target.toLocaleString()} km`;
+
+    document.getElementById('monthStart').textContent = '1日';
+    document.getElementById('monthMid').textContent = Math.ceil(daysInMonth/2) + '日';
+    document.getElementById('monthEnd').textContent = daysInMonth + '日';
+
+    document.getElementById('targetHalf').textContent =
+      (target/2).toLocaleString(undefined,{maximumFractionDigits:0}) + ' km';
+    document.getElementById('targetMax').textContent =
+      target.toLocaleString() + ' km';
+
+    document.getElementById('expectedKm').textContent =
+      expected.toLocaleString(undefined,{maximumFractionDigits:1}) + ' km';
+
+    const gapSign = gapKm >= 0 ? '+' : '';
+    document.getElementById('gapKm').textContent =
+      gapSign + gapKm.toLocaleString(undefined,{maximumFractionDigits:1}) + ' km';
+
+    document.getElementById('timeCard').textContent = timePct.toFixed(1) + '%';
+    document.getElementById('distanceCard').textContent = distancePct.toFixed(1) + '%';
+
+    const ptSign = gapPoints >= 0 ? '+' : '';
+    document.getElementById('gapPctText').textContent =
+      `${ptSign}${gapPoints.toFixed(1)} pt`;
+
+    // メーターは -50pt ～ +50pt を画面内100%に割り当て
+    const normalized = clamp((gapPoints + 50) / 100, 0, 1);
+    const needle = document.getElementById('needle');
+    needle.style.left = (normalized * 100) + '%';
+
+    const status = document.getElementById('status');
+
+    if (Math.abs(gapPoints) < 1.0){
+      status.textContent = `予定通りです（${gapPoints.toFixed(1)} pt）`;
+      status.style.color = 'var(--warn)';
+      needle.style.background = 'var(--warn)';
+    } else if (gapPoints > 0){
+      status.textContent =
+        `予定より ${Math.abs(gapKm).toFixed(1)} km 先行`;
+      status.style.color = 'var(--good)';
+      needle.style.background = 'var(--good)';
+    } else {
+      status.textContent =
+        `予定より ${Math.abs(gapKm).toFixed(1)} km 遅れ`;
+      status.style.color = 'var(--bad)';
+      needle.style.background = 'var(--bad)';
     }
+  }
 
-    function applyCourseTemplate(key, recalc = true) {
-      const course = courseTemplates.find(c => c.key === key);
-      if (!course) return;
-      q('courseName').value = course.name;
-      q('climbDistance').value = course.distance;
-      q('climbElevation').value = course.elevation;
-      q('summitAltitude').value = course.summit;
-      if (recalc) calculate();
-    }
+  targetEl.addEventListener('input', update);
+  currentEl.addEventListener('input', update);
 
-    function setSample() {
-      ids.forEach((id) => { if (q(id)) q(id).value = sample[id]; });
-      q('courseTemplate').value = sample.courseTemplate;
-      calculate();
-    }
-
-    function saveInputs() {
-      const state = {};
-      ids.forEach(id => { if (q(id)) state[id] = q(id).value; });
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      q('saveNote').textContent = `入力内容を保存しました: ${new Date().toLocaleTimeString('ja-JP')}`;
-    }
-
-    function loadInputs() {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      try {
-        const state = JSON.parse(raw);
-        Object.entries(state).forEach(([key, value]) => {
-          if (q(key)) q(key).value = value;
-        });
-      } catch (e) {
-        console.error('load failed', e);
-      }
-    }
-
-    function num(id) {
-      const v = parseFloat(q(id).value);
-      return Number.isFinite(v) ? v : 0;
-    }
-
-    function round(value, digits = 0) {
-      const p = 10 ** digits;
-      return Math.round(value * p) / p;
-    }
-
-    function kgText(watts, weight) {
-      if (!weight) return '-';
-      return round(watts / weight, 2).toFixed(2);
-    }
-
-    function bothText(watts, weight) {
-      return `${Math.round(watts)}W / ${kgText(watts, weight)}W/kg`;
-    }
-
-    function formatTime(minutesFloat) {
-      if (!Number.isFinite(minutesFloat) || minutesFloat <= 0) return '-';
-      const totalSeconds = Math.round(minutesFloat * 60);
-      const h = Math.floor(totalSeconds / 3600);
-      const m = Math.floor((totalSeconds % 3600) / 60);
-      const s = totalSeconds % 60;
-      if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-      return `${m}:${String(s).padStart(2,'0')}`;
-    }
-
-    function predictClimbTime(distanceKm, elevM, summitAltitudeM, powerW, riderKg, bikeKg, calibration) {
-      const totalMass = riderKg + bikeKg;
-      const gravity = 9.80665;
-      const grade = distanceKm > 0 ? elevM / (distanceKm * 1000) : 0;
-      const altitudePenalty = 1 - Math.max(0, summitAltitudeM - 1000) * 0.000012;
-      const usablePower = Math.max(120, powerW * Math.max(0.96, altitudePenalty));
-      const gravTimeSec = (totalMass * gravity * elevM) / usablePower;
-      const distanceFactorSec = distanceKm * (34 + Math.max(0, 0.06 - grade) * 130);
-      const totalSec = (gravTimeSec + distanceFactorSec) * calibration;
-      return totalSec / 60;
-    }
-
-    function calculate() {
-      const height = num('height');
-      const weight = num('weight');
-      const bikeWeight = num('bikeWeight');
-      const displayFtp = num('displayFtp');
-      const workoutFtp = num('workoutFtp');
-      const cp = num('cp');
-      const tte = num('tte');
-      const calibration = num('calibration') || 0.96;
-      const p10s = num('p10s');
-      const p1m = num('p1m');
-      const p5m = num('p5m');
-      const p10m = num('p10m');
-      const p20m = num('p20m');
-      const climbDistance = num('climbDistance');
-      const climbElevation = num('climbElevation');
-      const summitAltitude = num('summitAltitude');
-      const courseName = q('courseName').value || 'カスタムコース';
-
-      saveInputs();
-
-      const bmi = weight / ((height / 100) ** 2 || 1);
-      q('bmiOut').textContent = round(bmi, 1).toFixed(1);
-      q('weightOut').textContent = `${round(weight,1).toFixed(1)}kg`;
-      q('bikeWeightOut').textContent = `${round(bikeWeight,1).toFixed(1)}kg`;
-      q('displayFtpOut').textContent = bothText(displayFtp, weight);
-      q('workoutFtpOut').textContent = bothText(workoutFtp, weight);
-      q('cpOut').textContent = bothText(cp, weight);
-      q('p20Out').textContent = bothText(p20m, weight);
-      q('p5Out').textContent = bothText(p5m, weight);
-      q('p1Out').textContent = bothText(p1m, weight);
-      q('tteTag').textContent = `TTE: ${round(tte, 0)}分`;
-      q('ftpGapTag').textContent = `表示-実務FTP差: ${round(displayFtp - workoutFtp, 0)}W`;
-      q('cpGapTag').textContent = `実務FTP-CP差: ${round(workoutFtp - cp, 0)}W`;
-
-      const workoutRows = [
-        { label: '1分', purpose: '高強度・無酸素寄り', pct: '128% (実務FTP基準)', watts: Math.round(workoutFtp * 1.28) },
-        { label: '3分', purpose: 'VO2max / L5', pct: '115% (実務FTP基準)', watts: Math.round(workoutFtp * 1.15) },
-        { label: '5分', purpose: 'VO2max長め / L5', pct: '107% (実務FTP基準)', watts: Math.round(workoutFtp * 1.07) },
-        { label: '10分', purpose: '閾値上限 / L4高め', pct: 'CP+寄り', watts: Math.round(Math.min(displayFtp, cp + 8)) },
-        { label: '20分', purpose: 'TTE主練 / L4', pct: '95% (実務FTP基準)', watts: Math.round(workoutFtp * 0.95) },
-        { label: '30分', purpose: '長め持続 / SST上〜L4下', pct: '92% (実務FTP基準)', watts: Math.round(workoutFtp * 0.92) },
-        { label: '60分', purpose: '長時間持続 / SST', pct: '88% (実務FTP基準)', watts: Math.round(workoutFtp * 0.88) },
-      ];
-
-      const tbody = q('workoutTable');
-      tbody.innerHTML = '';
-      workoutRows.forEach(row => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${row.label}</td>
-          <td>${row.purpose}</td>
-          <td>${row.pct}</td>
-          <td><b>${row.watts}W</b></td>
-          <td>${kgText(row.watts, weight)}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-
-      const grade = climbDistance > 0 ? (climbElevation / (climbDistance * 1000)) * 100 : 0;
-      q('courseNameOut').textContent = courseName;
-      q('gradeOut').textContent = `${round(grade, 1).toFixed(1)}%`;
-      q('totalMassOut').textContent = `${round(weight + bikeWeight, 1).toFixed(1)}kg`;
-
-      const climbScenarios = [
-        { name: '守り', power: Math.round(Math.max(workoutFtp * 0.92, cp * 1.00)) },
-        { name: '基準', power: Math.round(Math.max(workoutFtp * 0.97, displayFtp * 0.96, cp * 1.03)) },
-        { name: '攻め', power: Math.round(Math.max(displayFtp * 1.00, p20m * 1.00, cp * 1.05)) },
-      ].map(s => ({
-        ...s,
-        wkg: kgText(s.power, weight),
-        timeMin: predictClimbTime(climbDistance, climbElevation, summitAltitude, s.power, weight, bikeWeight, calibration),
-      }));
-
-      q('climbPowerOut').textContent = bothText(climbScenarios[1].power, weight);
-      q('climbTimeOut').textContent = formatTime(climbScenarios[1].timeMin);
-      q('climbWkgOut').textContent = `${climbScenarios[1].wkg}W/kg`;
-
-      const climbBody = q('climbTable');
-      climbBody.innerHTML = '';
-      climbScenarios.forEach(s => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${s.name}</td>
-          <td>${s.power}W</td>
-          <td>${s.wkg}</td>
-          <td>${formatTime(s.timeMin)}</td>
-        `;
-        climbBody.appendChild(tr);
-      });
-
-      const combinedData = [
-        { label: '10秒', actual: p10s, workout: workoutRows[0].watts },
-        { label: '1分', actual: p1m, workout: workoutRows[0].watts },
-        { label: '3分', actual: null, workout: workoutRows[1].watts },
-        { label: '5分', actual: p5m, workout: workoutRows[2].watts },
-        { label: '10分', actual: p10m, workout: workoutRows[3].watts },
-        { label: '20分', actual: p20m, workout: workoutRows[4].watts },
-        { label: '30分', actual: null, workout: workoutRows[5].watts },
-        { label: '60分', actual: null, workout: workoutRows[6].watts },
-      ];
-
-      drawCombinedChart('combinedChart', combinedData, workoutFtp);
-    }
-
-    function drawCombinedChart(canvasId, data, workoutFtp) {
-      const canvas = q(canvasId);
-      const ctx = canvas.getContext('2d');
-      const w = canvas.width;
-      const h = canvas.height;
-      ctx.clearRect(0, 0, w, h);
-
-      const margin = { top: 36, right: 24, bottom: 58, left: 64 };
-      const plotW = w - margin.left - margin.right;
-      const plotH = h - margin.top - margin.bottom;
-      const max = Math.max(...data.flatMap(d => [d.actual || 0, d.workout || 0]), 380) * 1.08;
-      const stepX = plotW / Math.max(data.length - 1, 1);
-
-      const zoneBands = [
-        { label: 'L1', from: 0, to: workoutFtp * 0.55, color: 'rgba(170,170,170,0.12)' },
-        { label: 'L2', from: workoutFtp * 0.55, to: workoutFtp * 0.75, color: 'rgba(72,150,255,0.12)' },
-        { label: 'L3', from: workoutFtp * 0.75, to: workoutFtp * 0.90, color: 'rgba(66,211,146,0.12)' },
-        { label: 'L4', from: workoutFtp * 0.90, to: workoutFtp * 1.05, color: 'rgba(255,221,87,0.12)' },
-        { label: 'L5', from: workoutFtp * 1.05, to: workoutFtp * 1.20, color: 'rgba(255,184,77,0.12)' },
-        { label: 'L6', from: workoutFtp * 1.20, to: workoutFtp * 1.50, color: 'rgba(255,107,107,0.12)' },
-        { label: 'L7', from: workoutFtp * 1.50, to: max, color: 'rgba(180,116,255,0.12)' },
-      ];
-
-      zoneBands.forEach(band => {
-        const y1 = margin.top + plotH - (band.to / max) * plotH;
-        const y2 = margin.top + plotH - (band.from / max) * plotH;
-        ctx.fillStyle = band.color;
-        ctx.fillRect(margin.left, y1, plotW, y2 - y1);
-        ctx.fillStyle = 'rgba(255,255,255,0.38)';
-        ctx.font = '11px Inter, sans-serif';
-        ctx.fillText(band.label, margin.left + 6, y1 + 14);
-      });
-
-      ctx.strokeStyle = 'rgba(255,255,255,0.10)';
-      ctx.fillStyle = 'rgba(255,255,255,0.6)';
-      ctx.font = '12px Inter, sans-serif';
-      for (let i = 0; i <= 5; i++) {
-        const y = margin.top + (plotH / 5) * i;
-        const value = round(max - (max / 5) * i, 0);
-        ctx.beginPath();
-        ctx.moveTo(margin.left, y);
-        ctx.lineTo(w - margin.right, y);
-        ctx.stroke();
-        ctx.fillText(String(value), 12, y + 4);
-      }
-
-      ctx.beginPath();
-      let started = false;
-      data.forEach((d, i) => {
-        if (d.actual == null) return;
-        const x = margin.left + i * stepX;
-        const y = margin.top + plotH - (d.actual / max) * plotH;
-        if (!started) {
-          ctx.moveTo(x, y);
-          started = true;
-        } else {
-          ctx.lineTo(x, y);
-        }
-      });
-      ctx.strokeStyle = '#ffb84d';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-
-      ctx.beginPath();
-      data.forEach((d, i) => {
-        const x = margin.left + i * stepX;
-        const y = margin.top + plotH - (d.workout / max) * plotH;
-        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-      });
-      ctx.strokeStyle = '#6ea8fe';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-
-      data.forEach((d, i) => {
-        const x = margin.left + i * stepX;
-        if (d.actual != null) {
-          const yA = margin.top + plotH - (d.actual / max) * plotH;
-          ctx.beginPath();
-          ctx.arc(x, yA, 5, 0, Math.PI * 2);
-          ctx.fillStyle = '#ff6b6b';
-          ctx.fill();
-          ctx.fillStyle = '#eef2ff';
-          ctx.font = 'bold 12px Inter, sans-serif';
-          ctx.fillText(String(d.actual), x - 14, yA - 10);
-        }
-        const yW = margin.top + plotH - (d.workout / max) * plotH;
-        ctx.beginPath();
-        ctx.arc(x, yW, 4, 0, Math.PI * 2);
-        ctx.fillStyle = '#42d392';
-        ctx.fill();
-        ctx.fillStyle = '#dfe9ff';
-        ctx.font = '12px Inter, sans-serif';
-        ctx.fillText(String(d.workout), x - 12, yW + 18);
-
-        ctx.fillStyle = 'rgba(255,255,255,0.78)';
-        ctx.font = '12px Inter, sans-serif';
-        const labelWidth = ctx.measureText(d.label).width;
-        ctx.fillText(d.label, x - labelWidth / 2, h - 20);
-      });
-
-      ctx.fillStyle = '#eef2ff';
-      ctx.font = 'bold 15px Inter, sans-serif';
-      ctx.fillText('オレンジ: 入力パワーカーブ / 青: ワークアウト処方', margin.left, 20);
-    }
-
-    q('calcBtn').addEventListener('click', calculate);
-    q('sampleBtn').addEventListener('click', setSample);
-    q('courseTemplate').addEventListener('change', (e) => applyCourseTemplate(e.target.value));
-    ids.forEach(id => { if (q(id)) q(id).addEventListener('input', calculate); });
-
-    populateCourseTemplates();
-    loadInputs();
-    if (q('courseTemplate').value && q('courseTemplate').value !== 'custom') {
-      applyCourseTemplate(q('courseTemplate').value, false);
-    }
-    calculate();
-  </script>
+  update();
+  setInterval(update, 60000);
+</script>
 </body>
 </html>
