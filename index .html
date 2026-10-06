@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>月間距離進捗メーター</title>
+<style>
+:root{
+  --bg:#0f1115;--panel:#181c23;--panel2:#202631;--text:#f4f6f8;
+  --muted:#9aa4b2;--accent:#5da9ff;--good:#44d17a;--bad:#ff6666;--warn:#f5c451;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP","Yu Gothic UI",Meiryo,sans-serif;
+  background:linear-gradient(180deg,#0b0d11,#11151b);color:var(--text);
+  display:flex;justify-content:center;align-items:center;padding:24px
+}
+.app{
+  width:min(980px,100%);background:rgba(24,28,35,.96);border:1px solid #2b323e;
+  border-radius:22px;padding:26px;box-shadow:0 20px 50px rgba(0,0,0,.35)
+}
+h1{margin:0 0 6px;font-size:clamp(24px,4vw,36px)}
+.subtitle{color:var(--muted);margin-bottom:24px}
+.inputs{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:28px}
+.field{background:var(--panel2);border:1px solid #303846;border-radius:14px;padding:14px}
+label{display:block;color:var(--muted);font-size:13px;margin-bottom:8px}
+.input-wrap{display:flex;align-items:center;gap:8px}
+input[type=number]{
+  width:100%;background:#11151b;color:white;border:1px solid #384252;border-radius:10px;
+  padding:12px 14px;font-size:20px;outline:none
+}
+input[type=number]:focus{border-color:var(--accent)}
+.unit{color:var(--muted);font-weight:600}
+.saved{margin-top:7px;font-size:11px;color:#778394}
+.section{margin-top:22px}
+.section-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-end;margin-bottom:10px}
+.section-title{font-size:15px;color:#dbe3ec;font-weight:700}
+.section-value{font-size:14px;color:var(--muted);text-align:right}
+.bar{height:28px;border-radius:999px;overflow:hidden;background:#0f1319;border:1px solid #303846;position:relative}
+.fill{position:absolute;left:0;top:0;bottom:0;width:0%;transition:width .25s linear}
+.time-fill{background:linear-gradient(90deg,#5865f2,#5da9ff)}
+.distance-fill{background:linear-gradient(90deg,#1fa95a,#44d17a)}
+.bar-label{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;
+  font-weight:800;text-shadow:0 1px 2px rgba(0,0,0,.5);pointer-events:none
+}
+.ticks{display:flex;justify-content:space-between;font-size:11px;color:#6f7b8a;margin-top:7px}
+.meter{margin-top:28px;background:#10141a;border:1px solid #303846;border-radius:16px;padding:20px}
+.gap-line{
+  position:relative;height:16px;border-radius:999px;
+  background:linear-gradient(90deg,rgba(255,102,102,.65) 0%,rgba(255,102,102,.18) 45%,rgba(255,255,255,.15) 50%,rgba(68,209,122,.18) 55%,rgba(68,209,122,.65) 100%);
+  margin:18px 0 8px
+}
+.center-marker{position:absolute;top:-8px;bottom:-8px;width:2px;left:50%;background:#f4f6f8;opacity:.7}
+.needle{
+  position:absolute;top:-9px;width:18px;height:34px;border-radius:8px;transform:translateX(-50%);
+  background:white;box-shadow:0 0 0 3px rgba(255,255,255,.12),0 5px 15px rgba(0,0,0,.4);
+  transition:left .25s linear,background .25s linear
+}
+.gap-scale{display:flex;justify-content:space-between;color:var(--muted);font-size:11px}
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:22px}
+.card{background:var(--panel2);border:1px solid #303846;border-radius:14px;padding:14px}
+.card .name{color:var(--muted);font-size:12px;margin-bottom:7px}
+.card .num{font-size:22px;font-weight:800;line-height:1.25}
+.status{margin-top:18px;font-size:20px;font-weight:800;text-align:center;padding:14px;border-radius:14px;background:#141922}
+.daily-need{margin-top:12px;text-align:center;color:var(--muted);font-size:14px}
+.daily-need strong{color:var(--text);font-size:24px;margin:0 4px}
+.footer{margin-top:18px;color:#778394;font-size:12px;line-height:1.7}
+@media(max-width:720px){.inputs,.summary{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>月間距離進捗メーター</h1>
+  <div class="subtitle">月初から月末までの時間進捗と、走行距離の進捗を1秒ごとに比較します。</div>
+
+  <div class="inputs">
+    <div class="field">
+      <label for="target">月間目標距離</label>
+      <div class="input-wrap">
+        <input id="target" type="number" min="1" step="1" value="1500">
+        <span class="unit">km</span>
+      </div>
+      <div class="saved">入力値はこのブラウザに自動保存されます</div>
+    </div>
+    <div class="field">
+      <label for="current">現在の走行距離</label>
+      <div class="input-wrap">
+        <input id="current" type="number" min="0" step="0.001" value="0">
+        <span class="unit">km</span>
+      </div>
+      <div class="saved">小数入力可（例：523.456 km）</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">時間進捗</div>
+      <div class="section-value" id="timeText">--</div>
+    </div>
+    <div class="bar">
+      <div class="fill time-fill" id="timeFill"></div>
+      <div class="bar-label" id="timePct">0%</div>
+    </div>
+    <div class="ticks">
+      <span>1日</span><span id="monthMid">中間</span><span id="monthEnd">月末</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">距離進捗</div>
+      <div class="section-value" id="distanceText">--</div>
+    </div>
+    <div class="bar">
+      <div class="fill distance-fill" id="distanceFill"></div>
+      <div class="bar-label" id="distancePct">0%</div>
+    </div>
+    <div class="ticks">
+      <span>0 km</span><span id="targetHalf">750 km</span><span id="targetMax">1500 km</span>
+    </div>
+  </div>
+
+  <div class="meter">
+    <div class="section-head">
+      <div class="section-title">予定進捗との差</div>
+      <div class="section-value" id="gapPctText">0 pt</div>
+    </div>
+    <div class="gap-line">
+      <div class="center-marker"></div>
+      <div class="needle" id="needle"></div>
+    </div>
+    <div class="gap-scale"><span>遅れ</span><span>予定通り</span><span>先行</span></div>
+
+    <div class="summary">
+      <div class="card"><div class="name">現在時刻の予定距離</div><div class="num" id="expectedKm">0 km 000 m</div></div>
+      <div class="card"><div class="name">予定との差</div><div class="num" id="gapKm">0 km 000 m</div></div>
+      <div class="card"><div class="name">時間進捗率</div><div class="num" id="timeCard">0%</div></div>
+      <div class="card"><div class="name">距離進捗率</div><div class="num" id="distanceCard">0%</div></div>
+    </div>
+
+    <div class="status" id="status">入力してください</div>
+    <div class="daily-need">目標達成に必要な1日あたり距離：<strong id="dailyNeed">0.0</strong> km/日</div>
+  </div>
+
+  <div class="footer">
+    ※ 時間進捗は月初 0:00:00 から翌月1日 0:00:00 までを100%として1秒ごとに再計算します。<br>
+    ※ 「現在時刻の予定距離」と「予定との差」は km / m 単位で毎秒更新されます。<br>
+    ※ 月間目標距離・現在距離はブラウザに保存され、次回アクセス時に自動復元されます。<br>
+    ※ 1日あたり必要距離は、現在時刻から月末までの残り時間を日数換算して計算します。
+  </div>
+</div>
+
+<script>
+const targetEl = document.getElementById('target');
+const currentEl = document.getElementById('current');
+
+const STORAGE_TARGET = 'monthlyDistanceTarget';
+const STORAGE_CURRENT = 'monthlyDistanceCurrent';
+
+function clamp(v,min,max){ return Math.min(max,Math.max(min,v)); }
+
+function formatKmM(valueKm, showSign=false){
+  if(!Number.isFinite(valueKm)) return '0 km 000 m';
+  const sign = valueKm < 0 ? '-' : (showSign && valueKm > 0 ? '+' : '');
+  const totalMeters = Math.round(Math.abs(valueKm) * 1000);
+  const km = Math.floor(totalMeters / 1000);
+  const meters = totalMeters % 1000;
+  return `${sign}${km.toLocaleString()} km ${String(meters).padStart(3,'0')} m`;
+}
+
+function saveInputs(){
+  try{
+    localStorage.setItem(STORAGE_TARGET, targetEl.value);
+    localStorage.setItem(STORAGE_CURRENT, currentEl.value);
+  }catch(e){}
+}
+
+function restoreInputs(){
+  try{
+    const t = localStorage.getItem(STORAGE_TARGET);
+    const c = localStorage.getItem(STORAGE_CURRENT);
+    if(t !== null && t !== '') targetEl.value = t;
+    if(c !== null && c !== '') currentEl.value = c;
+  }catch(e){}
+}
+
+function update(){
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const start = new Date(y,m,1,0,0,0,0);
+  const end = new Date(y,m+1,1,0,0,0,0);
+
+  const timeRate = clamp((now - start) / (end - start), 0, 1);
+  const target = Math.max(1, Number(targetEl.value) || 1);
+  const current = Math.max(0, Number(currentEl.value) || 0);
+
+  const distanceRate = current / target;
+  const expected = target * timeRate;
+  const gap = current - expected;
+  const gapRate = distanceRate - timeRate;
+
+  const timePct = timeRate * 100;
+  const distancePct = distanceRate * 100;
+  const gapPt = gapRate * 100;
+
+  document.getElementById('timeFill').style.width = timePct + '%';
+  document.getElementById('distanceFill').style.width = clamp(distancePct,0,100) + '%';
+
+  document.getElementById('timePct').textContent = timePct.toFixed(5) + '%';
+  document.getElementById('distancePct').textContent = distancePct.toFixed(3) + '%';
+
+  const days = new Date(y,m+1,0).getDate();
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  const ss = String(now.getSeconds()).padStart(2,'0');
+
+  document.getElementById('timeText').textContent = `${now.getDate()}日 ${hh}:${mm}:${ss} / ${days}日`;
+  document.getElementById('distanceText').textContent = `${formatKmM(current)} / ${target.toLocaleString()} km`;
+  document.getElementById('monthMid').textContent = Math.ceil(days/2) + '日';
+  document.getElementById('monthEnd').textContent = days + '日';
+  document.getElementById('targetHalf').textContent = (target/2).toLocaleString(undefined,{maximumFractionDigits:1}) + ' km';
+  document.getElementById('targetMax').textContent = target.toLocaleString() + ' km';
+
+  document.getElementById('expectedKm').textContent = formatKmM(expected);
+  document.getElementById('gapKm').textContent = formatKmM(gap,true);
+  document.getElementById('timeCard').textContent = timePct.toFixed(5) + '%';
+  document.getElementById('distanceCard').textContent = distancePct.toFixed(3) + '%';
+  document.getElementById('gapPctText').textContent = `${gapPt >= 0 ? '+' : ''}${gapPt.toFixed(3)} pt`;
+
+  const remainingKm = Math.max(0, target - current);
+  const remainingDays = Math.max((end - now) / 86400000, 1 / 86400);
+  const dailyNeed = remainingKm / remainingDays;
+  document.getElementById('dailyNeed').textContent = dailyNeed.toFixed(1);
+
+  const needle = document.getElementById('needle');
+  needle.style.left = (clamp((gapPt + 50) / 100,0,1) * 100) + '%';
+
+  const status = document.getElementById('status');
+  if(Math.abs(gapPt) < 0.1){
+    status.textContent = `ほぼ予定通り（差 ${formatKmM(gap,true)}）`;
+    status.style.color = 'var(--warn)';
+    needle.style.background = 'var(--warn)';
+  }else if(gapPt > 0){
+    status.textContent = `予定より ${formatKmM(Math.abs(gap))} 先行`;
+    status.style.color = 'var(--good)';
+    needle.style.background = 'var(--good)';
+  }else{
+    status.textContent = `予定より ${formatKmM(Math.abs(gap))} 遅れ`;
+    status.style.color = 'var(--bad)';
+    needle.style.background = 'var(--bad)';
+  }
+}
+
+targetEl.addEventListener('input',()=>{ saveInputs(); update(); });
+currentEl.addEventListener('input',()=>{ saveInputs(); update(); });
+
+restoreInputs();
+update();
+setInterval(update,1000);
+</script>
+</body>
+</html>
